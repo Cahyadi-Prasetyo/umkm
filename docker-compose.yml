@@ -1,0 +1,72 @@
+services:
+  # ============================================
+  # MySQL Database
+  # ============================================
+  mysql:
+    image: mysql:8.0
+    container_name: surotaste-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-surotaste}
+      MYSQL_USER: ${MYSQL_USER:-surotaste_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-surotaste_pass}
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - surotaste-network
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # Backend Server (Express.js + Node.js)
+  # ============================================
+  server:
+    build:
+      context: ./Server
+      dockerfile: Dockerfile
+    container_name: surotaste-server
+    restart: unless-stopped
+    env_file:
+      - .env.docker
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - server_uploads:/app/uploads
+    networks:
+      - surotaste-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  # ============================================
+  # Frontend Client (React + Nginx)
+  # ============================================
+  client:
+    build:
+      context: ./Client
+      dockerfile: Dockerfile
+    container_name: surotaste-client
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    networks:
+      - surotaste-network
+    depends_on:
+      - server
+
+# ============================================
+# Networks & Volumes
+# ============================================
+networks:
+  surotaste-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+  server_uploads:

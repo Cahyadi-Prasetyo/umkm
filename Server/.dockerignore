@@ -1,0 +1,6 @@
+node_modules
+.git
+*.md
+.env*
+# .adminjs is now INCLUDED - contains pre-built AdminJS component bundles
+database.sqlite
